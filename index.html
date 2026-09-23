@@ -28,6 +28,11 @@
   .az-bar { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:12px; }
   .az-bar button { padding:4px 8px; font-size:0.8rem; border:1px solid var(--border); border-radius:4px;
     background:var(--bg); color:var(--fg); cursor:pointer; }
+  .prefix-jump { display:flex; align-items:center; gap:6px; margin-bottom:12px; font-size:0.85rem; color:var(--muted); }
+  .prefix-jump input { width:110px; padding:5px 8px; font-size:0.9rem; border:1px solid var(--border); border-radius:4px;
+    background:var(--bg); color:var(--fg); text-transform:uppercase; }
+  .prefix-jump button { padding:5px 12px; font-size:0.85rem; border:1px solid var(--border); border-radius:4px;
+    background:var(--bg); color:var(--fg); cursor:pointer; }
   .status-line { color:var(--muted); font-size:0.85rem; margin-bottom:14px; min-height:1.2em; }
   .pagination { display:flex; justify-content:center; align-items:center; gap:14px; margin:16px 0; }
   .pagination button { padding:7px 14px; font-size:0.9rem; border:1px solid var(--border); border-radius:6px;
@@ -74,6 +79,11 @@
   </div>
   <div class="az-label">Jump to call number:</div>
   <div id="azBar" class="az-bar"></div>
+  <div class="prefix-jump">
+    <label for="prefixInput">Or type the start of a call number:</label>
+    <input type="text" id="prefixInput" placeholder="e.g. BH" maxlength="12" autocomplete="off">
+    <button id="prefixBtn">Go</button>
+  </div>
   <div class="status-line" id="statusLine">Loading catalog data...</div>
   <div id="topPagination"></div>
 
@@ -168,6 +178,23 @@
     renderBrowsePage();
   }
 
+  function jumpToPrefix(raw) {
+    const p = (raw || "").trim().toUpperCase();
+    if (!p) return;
+    if (mode !== 'browse') { clearSearch(); }
+    let lo = 0, hi = browseFiltered.length;
+    while (lo < hi) {
+      const mid = (lo+hi)>>1;
+      if (callKey(browseFiltered[mid]) < p) { lo = mid+1; } else { hi = mid; }
+    }
+    browseStart = lo;
+    renderBrowsePage();
+    const first = browseFiltered[lo];
+    if (!first || callKey(first).indexOf(p) !== 0) {
+      statusLine.textContent += " (No call numbers start with " + p + ". Showing the nearest ones.)";
+    }
+  }
+
   function applyLocationFilter() {
     const loc = locationFilter.value;
     browseFiltered = loc ? callSorted.filter(function(r){ return r[14]===loc; }) : callSorted;
@@ -260,6 +287,10 @@
       '</div>';
     }).join("");
   }
+
+  const prefixInput = document.getElementById('prefixInput');
+  document.getElementById('prefixBtn').addEventListener('click', function(){ jumpToPrefix(prefixInput.value); });
+  prefixInput.addEventListener('keydown', function(e){ if (e.key==='Enter') jumpToPrefix(prefixInput.value); });
 
   searchBtn.addEventListener('click', runSearch);
   searchInput.addEventListener('keydown', function(e){ if (e.key==='Enter') runSearch(); });
